@@ -79,9 +79,14 @@ if st.button("Predict Customer Segment"):
     # Predict cluster
     cluster = kmeans.predict(df_pca)[0]
 
-    # ==============================
-    # Cluster Interpretation
-    # ==============================
+# ==============================
+# Business rule override
+# ==============================
+# If Income and Total Purchases are very high, force Premium
+if Income > 80000 and Total_purchases > 30000:
+    segment = "💎 Premium Customer"
+else:
+    # Interpret KMeans cluster
     if cluster == 0:
         segment = "💎 Premium Customer"
     elif cluster == 1:
@@ -89,4 +94,6 @@ if st.button("Predict Customer Segment"):
     else:
         segment = "🛍️ Moderate Customer"
 
-    st.success(f"Predicted Segment: {segment}")
+st.success(f"Predicted Segment: {segment}")
+
+
