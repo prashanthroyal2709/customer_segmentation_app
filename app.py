@@ -4,14 +4,18 @@ import joblib
 import os
 
 # ==============================
-# Load saved models
+# Load saved models safely
 # ==============================
 BASE_DIR = os.path.dirname(__file__)  # folder where app.py is
 
-kmeans = joblib.load(os.path.join(BASE_DIR, "kmeans_customer_segmentation.pkl"))
-scaler = joblib.load(os.path.join(BASE_DIR, "scaler.pkl"))
-pca = joblib.load(os.path.join(BASE_DIR, "pca_model.pkl"))
-final_columns = joblib.load(os.path.join(BASE_DIR, "final_df_columns.pkl"))
+try:
+    kmeans = joblib.load(os.path.join(BASE_DIR, "kmeans_customer_segmentation.pkl"))
+    scaler = joblib.load(os.path.join(BASE_DIR, "scaler.pkl"))
+    pca = joblib.load(os.path.join(BASE_DIR, "pca_model.pkl"))
+    final_columns = joblib.load(os.path.join(BASE_DIR, "final_df_columns.pkl"))
+except Exception as e:
+    st.error(f"Error loading models: {e}")
+
 numeric_cols = [
     'Income','Recency','NumWebVisitsMonth','Complain','Response',
     'Age','Children','Products','Total_purchases','Acceptedcmp','since'
@@ -21,10 +25,8 @@ numeric_cols = [
 # Streamlit UI
 # ==============================
 st.set_page_config(page_title="Customer Segmentation App", layout="centered")
-
 st.title("🧠 Customer Segmentation Web App")
 st.write("Predict customer segment using Machine Learning")
-
 st.divider()
 
 # ==============================
@@ -46,56 +48,60 @@ since = st.number_input("Customer Since (months)", min_value=0, value=24)
 # Prediction Button
 # ==============================
 if st.button("Predict Customer Segment"):
-    new_customer = {
-        'Income': Income,
-        'Recency': Recency,
-        'NumWebVisitsMonth': NumWebVisitsMonth,
-        'Complain': Complain,
-        'Response': Response,
-        'Age': Age,
-        'Children': Children,
-        'Products': Products,
-        'Total_purchases': Total_purchases,
-        'Acceptedcmp': Acceptedcmp,
-        'since': since
-    }
+    try:
+        # Create DataFrame from user input
+        new_customer = pd.DataFrame([{
+            'Income': Income,
+            'Recency': Recency,
+            'NumWebVisitsMonth': NumWebVisitsMonth,
+            'Complain': Complain,
+            'Response': Response,
+            'Age': Age,
+            'Children': Children,
+            'Products': Products,
+            'Total_purchases': Total_purchases,
+            'Acceptedcmp': Acceptedcmp,
+            'since': since
+        }])
 
-    df = pd.DataFrame([new_customer])
+        # Add missing columns
+        for col in final_columns:
+            if col not in new_customer.columns:
+                new_customer[col] = 0
 
-    # Add missing columns
-    for col in final_columns:
-        if col not in df.columns:
-            df[col] = 0
+        # Reorder columns
+        new_customer = new_customer[final_columns]
 
-    # Reorder columns
-    df = df[final_columns]
+        # Scale numeric columns
+        new_customer[numeric_cols] = scaler.transform(new_customer[numeric_cols])
 
-    # Scale numeric columns
-    df[numeric_cols] = scaler.transform(df[numeric_cols])
+        # Apply PCA
+        df_pca = pca.transform(new_customer[numeric_cols].values)
 
-    # Apply PCA
-    df_pca = pca.transform(df[numeric_cols].values)
+        # ==============================
+        # Check dimensions
+        # ==============================
+        if df_pca.shape[1] != kmeans.cluster_centers_.shape[1]:
+            st.error("Error: Input features do not match KMeans model features!")
+        else:
+            # Predict cluster using KMeans
+            cluster = kmeans.predict(df_pca)[0]
 
-# ==============================
-# Predict cluster using KMeans
-# ==============================
-cluster = kmeans.predict(df_pca)[0]
+            # ==============================
+            # Business rule override
+            # ==============================
+            # Force Premium for high-value customers
+            if Income > 80000 and Total_purchases > 30000:
+                segment = "💎 Premium Customer"
+            else:
+                if cluster == 0:
+                    segment = "💎 Premium Customer"
+                elif cluster == 1:
+                    segment = "💰 Budget Customer"
+                else:
+                    segment = "🛍️ Moderate Customer"
 
-# ==============================
-# Business rule override
-# ==============================
-if Income > 80000 and Total_purchases > 30000:
-    segment = "💎 Premium Customer"
-else:
-    if cluster == 0:
-        segment = "💎 Premium Customer"
-    elif cluster == 1:
-        segment = "💰 Budget Customer"
-    else:
-        segment = "🛍️ Moderate Customer"
+            st.success(f"Predicted Segment: {segment}")
 
-st.success(f"Predicted Segment: {segment}")
-
-
-
-
+    except Exception as e:
+        st.error(f"Error during prediction: {e}")
