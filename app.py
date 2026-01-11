@@ -42,7 +42,7 @@ Children = st.number_input("Children", min_value=0, value=1)
 Products = st.number_input("Products Purchased", min_value=0, value=3)
 Total_purchases = st.number_input("Total Purchases", min_value=0, value=2000)
 Acceptedcmp = st.selectbox("Accepted Campaign", [0, 1])
-since = st.number_input("Customer Since (months)", min_value=0, value=24)
+since = st.number_input("Customer Since (years)", min_value=0, value=24)
 
 # ==============================
 # Prediction Button
@@ -105,3 +105,4 @@ if st.button("Predict Customer Segment"):
 
     except Exception as e:
         st.error(f"Error during prediction: {e}")
+
