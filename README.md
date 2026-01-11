@@ -4,7 +4,7 @@ This project is a **Customer Segmentation Web App** built using **Machine Learni
 It predicts the type of customer based on their behavior and demographic details.
 
 ## 🚀 Live Demo
-👉 https://YOUR_APP_NAME.streamlit.app
+👉 https://customersegmentation27091.streamlit.app/
 
 ## 📌 Problem Statement
 Businesses need to understand customer behavior to:
